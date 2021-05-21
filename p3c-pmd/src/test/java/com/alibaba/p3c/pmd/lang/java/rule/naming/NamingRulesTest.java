@@ -16,6 +16,7 @@
 package com.alibaba.p3c.pmd.lang.java.rule.naming;
 
 import net.sourceforge.pmd.testframework.SimpleAggregatorTst;
+import org.junit.Test;
 
 /**
  * Test for naming rules.
@@ -40,5 +41,13 @@ public class NamingRulesTest extends SimpleAggregatorTst {
         addRule(RULESET, "BooleanPropertyShouldNotStartWithIsRule");
         addRule(RULESET, "ArrayNamingShouldHaveBracketRule");
         addRule(RULESET, "PackageNamingRule");
+    }
+
+    @Test
+    public void testExcludeVariable() {
+        LowerCamelCaseVariableNamingRule rule = new LowerCamelCaseVariableNamingRule();
+        rule.setRuleSetName(RULESET);
+        rule.setName("LowerCamelCaseVariableNamingRule");
+        runTests(rule);
     }
 }

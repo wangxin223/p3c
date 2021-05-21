@@ -8,6 +8,7 @@
     private String AbC;
     private String abCd;
     private String locationA;
+    private String companyID;
     private void f(){
         String s = "test";
     }

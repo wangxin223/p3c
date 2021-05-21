@@ -15,6 +15,10 @@
  */
 package com.alibaba.p3c.pmd.lang.java.rule.naming;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import com.alibaba.p3c.pmd.I18nResources;
@@ -28,6 +32,8 @@ import net.sourceforge.pmd.lang.java.ast.ASTFieldDeclaration;
 import net.sourceforge.pmd.lang.java.ast.ASTMethodDeclarator;
 import net.sourceforge.pmd.lang.java.ast.ASTTypeDeclaration;
 import net.sourceforge.pmd.lang.java.ast.ASTVariableDeclaratorId;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * [Mandatory] Method names, parameter names, member variable names, and local variable names should be written in
@@ -39,7 +45,35 @@ import net.sourceforge.pmd.lang.java.ast.ASTVariableDeclaratorId;
 public class LowerCamelCaseVariableNamingRule extends AbstractAliRule {
 
     private static final String MESSAGE_KEY_PREFIX = "java.naming.LowerCamelCaseVariableNamingRule.violation.msg";
-    private Pattern pattern = Pattern.compile("^[a-z][a-z0-9]*([A-Z][a-z0-9]+)*(DO|DTO|VO|DAO|BO|DOList|DTOList|VOList|DAOList|BOList|X|Y|Z|UDF|UDAF|[A-Z])?$");
+    private final Pattern pattern = Pattern.compile("^[a-z][a-z0-9]*([A-Z][a-z0-9]+)*(DO|DTO|VO|DAO|BO|DOList|DTOList|VOList|DAOList|BOList|X|Y|Z|UDF|UDAF|[A-Z])?$");
+    private static final List<String> EXCLUDE_VARIABLE_LIST = new ArrayList<>();
+    private static final String EXCLUDE_VARIABLE = "CamelCaseVariable.exclude";
+
+    static {
+        InputStream inputStream = LowerCamelCaseVariableNamingRule.class.getClassLoader().getResourceAsStream("p3c/config.properties");
+        if(inputStream != null) {
+            try {
+                List<String> configList = IOUtils.readLines(inputStream, "UTF-8");
+                for(String config : configList) {
+                    if(StringUtils.isNoneBlank(config)) {
+                        String [] keyValuePair = config.split("=");
+                        if(keyValuePair.length == 2) {
+                            String key = StringUtils.trim(keyValuePair[0]);
+                            String value = StringUtils.trim(keyValuePair[1]);
+                            if(EXCLUDE_VARIABLE.equals(key)) {
+                                String[] tmpList = value.split(",");
+                                for(String tmp : tmpList) {
+                                    EXCLUDE_VARIABLE_LIST.add(StringUtils.trim(tmp));
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                // ignore error
+            }
+        }
+    }
 
     @Override
     public Object visit(final ASTVariableDeclaratorId node, Object data) {
@@ -62,7 +96,7 @@ public class LowerCamelCaseVariableNamingRule extends AbstractAliRule {
         }
 
         // variable naming violate lowerCamelCase
-        if (!(pattern.matcher(node.getImage()).matches())) {
+        if (!(pattern.matcher(node.getImage()).matches()) && !excludeVariable(node)) {
             ViolationUtils.addViolationWithPrecisePosition(this, node, data,
                 I18nResources.getMessage(MESSAGE_KEY_PREFIX + ".variable", node.getImage()));
         }
@@ -89,5 +123,15 @@ public class LowerCamelCaseVariableNamingRule extends AbstractAliRule {
     private boolean variableNamingStartOrEndWithDollarAndUnderLine(String variable) {
         return variable.startsWith(StringAndCharConstants.DOLLAR)
             || variable.startsWith(StringAndCharConstants.UNDERSCORE);
+    }
+
+    private boolean excludeVariable(ASTVariableDeclaratorId node) {
+        String image = node.getImage();
+        for(String excludeVariable : EXCLUDE_VARIABLE_LIST) {
+            if(image.contains(excludeVariable)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
